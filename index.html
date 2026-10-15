@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>슈퍼마리오 수학 월드 & 닌텐도 타임 뱅크</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Jua & Press Start 2P -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        marioRed: '#E52521',
+                        marioBlue: '#0066B2',
+                        marioYellow: '#FCD116',
+                        marioGreen: '#00A651',
+                        marioBrown: '#8B4513',
+                        brickBg: '#D35400'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Jua', sans-serif;
+            background-color: #5c94fc; /* Mario classic sky blue */
+            background-image: 
+                radial-gradient(circle at 50% 100%, #ffffff 10%, transparent 11%),
+                radial-gradient(circle at 20% 80%, rgba(255,255,255,0.4) 8%, transparent 9%),
+                radial-gradient(circle at 80% 75%, rgba(255,255,255,0.4) 12%, transparent 13%);
+            background-size: 100% 100%, 100% 100%, 100% 100%;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        /* Retro 3D Button and Card Styles */
+        .mario-box {
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .mario-btn {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+            transition: all 0.1s ease;
+        }
+
+        .mario-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .mario-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        .question-block {
+            background: linear-gradient(135deg, #fcd116 0%, #f39c12 100%);
+            border: 4px solid #000;
+            box-shadow: inset 4px 4px 0 #ffeaa7, inset -4px -4px 0 #d35400, 4px 4px 0 #000;
+        }
+
+        /* Floating animations */
+        @keyframes float-coin {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(10deg); }
+        }
+
+        .animate-float {
+            animation: float-coin 2.5s infinite ease-in-out;
+        }
+
+        /* Confetti */
+        .confetti-piece {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            pointer-events: none;
+            animation: drop-confetti 1.8s linear forwards;
+            z-index: 100;
+        }
+
+        @keyframes drop-confetti {
+            0% { transform: translateY(-30px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(500px) rotate(720deg); opacity: 0; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #ffeaa7;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #E52521;
+            border: 2px solid #000;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-gray-900 pb-16 select-none">
+
+    <!-- Top Game HUD Bar -->
+    <header class="sticky top-0 z-40 bg-yellow-400 border-b-4 border-black px-4 py-3 shadow-md">
+        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            
+            <!-- Logo / Title -->
+            <div class="flex items-center gap-2">
+                <span class="text-3xl animate-bounce">🍄</span>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-black text-red-600 tracking-wider drop-shadow-[2px_2px_0px_rgba(255,255,255,1)]">
+                        슈퍼마리오 수학 퀘스트
+                    </h1>
+                    <p class="text-xs sm:text-sm font-bold text-gray-800 -mt-1">초1 수학 풀고 닌텐도 게임 시간 적립하자! 🎮</p>
+                </div>
+            </div>
+
+            <!-- Nintendo Time Bank HUD -->
+            <div class="flex items-center gap-2 sm:gap-4 flex-wrap">
+                <!-- Cumulative Coins -->
+                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl mario-box">
+                    <span class="text-xl animate-spin text-yellow-500">🪙</span>
+                    <span class="text-sm font-bold text-gray-600">코인:</span>
+                    <span id="hud-coin-count" class="text-lg font-black text-amber-600">0</span>
+                </div>
+
+                <!-- Nintendo Game Time Bank -->
+                <div class="flex items-center gap-2 bg-red-500 text-white px-4 py-1.5 rounded-2xl mario-box animate-pulse">
+                    <span class="text-xl">🎮</span>
+                    <div>
+                        <span class="text-xs font-bold block text-yellow-200">닌텐도 시간:</span>
+                        <span id="hud-time-bank" class="text-xl sm:text-2xl font-black text-yellow-300">0분</span>
+                    </div>
+                </div>
+
+                <!-- Use Time Timer Button -->
+                <button id="open-timer-btn" class="mario-btn bg-emerald-500 hover:bg-emerald-600 text-white px-3 sm:px-4 py-2 rounded-xl font-black text-sm sm:text-base flex items-center gap-1">
+                    ⏱️ 시간 쓰기!
+                </button>
+
+                <!-- Sound FX Toggle -->
+                <button id="sound-toggle-btn" class="mario-btn bg-white hover:bg-gray-100 p-2 rounded-xl text-lg" title="소리 켜기/끄기">
+                    🔊
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tab Controls -->
+    <div class="max-w-4xl mx-auto mt-6 px-4">
+        <div class="grid grid-cols-3 gap-2 sm:gap-4 p-2 bg-black/20 backdrop-blur-sm rounded-2xl mario-box">
+            <button id="tab-encyclopedia" class="tab-btn active bg-red-500 text-white font-black py-3 px-2 rounded-xl mario-btn text-base sm:text-xl flex items-center justify-center gap-1 sm:gap-2">
+                📖 <span>마리오 도감</span>
+            </button>
+            <button id="tab-math" class="tab-btn bg-white text-gray-800 font-black py-3 px-2 rounded-xl mario-btn text-base sm:text-xl flex items-center justify-center gap-1 sm:gap-2">
+                ⭐ <span>수학 퀘스트</span>
+            </button>
+            <button id="tab-riddle" class="tab-btn bg-white text-gray-800 font-black py-3 px-2 rounded-xl mario-btn text-base sm:text-xl flex items-center justify-center gap-1 sm:gap-2">
+                ❓ <span>수수께끼</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto px-4 mt-6">
+
+        <!-- VIEW 1: ENCYCLOPEDIA -->
+        <section id="view-encyclopedia" class="space-y-6">
+            <!-- Filter Bar -->
+            <div class="flex flex-wrap justify-center gap-2">
+                <button class="filter-btn active mario-btn bg-yellow-400 text-black px-4 py-2 rounded-xl font-black text-sm sm:text-base" data-filter="all">🌟 전체 보기</button>
+                <button class="filter-btn mario-btn bg-white text-gray-700 px-4 py-2 rounded-xl font-bold text-sm sm:text-base" data-filter="hero">👑 마리오 & 친구들</button>
+                <button class="filter-btn mario-btn bg-white text-gray-700 px-4 py-2 rounded-xl font-bold text-sm sm:text-base" data-filter="villain">🔥 쿠파 군단</button>
+            </div>
+
+            <!-- Character Grid -->
+            <div id="character-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Dynamically populated via JS -->
+            </div>
+        </section>
+
+        <!-- VIEW 2: MATH QUEST (Game Time Earner!) -->
+        <section id="view-math" class="hidden max-w-2xl mx-auto">
+            <div class="bg-white rounded-3xl p-6 sm:p-8 mario-box relative overflow-hidden border-4 border-black">
+                
+                <!-- Stage Header -->
+                <div class="flex items-center justify-between border-b-4 border-yellow-400 pb-3 mb-6">
+                    <div>
+                        <span class="inline-block px-3 py-1 bg-red-100 text-red-600 rounded-full font-black text-xs sm:text-sm border-2 border-red-300">
+                            초등 1학년 맞춤 문제!
+                        </span>
+                        <h2 class="text-2xl sm:text-3xl font-black text-gray-800 mt-1" id="quiz-category-title">
+                            🍄 쿠파 성의 덧셈 함정!
+                        </h2>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs font-bold text-gray-500">연속 정답 보너스</span>
+                        <div class="text-xl font-black text-amber-500 flex items-center justify-end gap-1">
+                            🔥 <span id="quiz-streak">0</span>연속!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reward Banner -->
+                <div class="bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-200 p-3 rounded-2xl border-2 border-amber-400 flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl animate-spin">🪙</span>
+                        <span class="font-bold text-amber-900 text-sm sm:text-base">맞히면 닌텐도 게임 시간:</span>
+                    </div>
+                    <span class="bg-red-500 text-white font-black px-3 py-1 rounded-xl text-base sm:text-lg mario-box animate-bounce">
+                        +2분 적립! ⏱️
+                    </span>
+                </div>
+
+                <!-- Visual Question Box -->
+                <div class="bg-sky-50 border-4 border-blue-400 rounded-3xl p-6 text-center mb-6 relative">
+                    <div class="text-5xl sm:text-6xl mb-4" id="quiz-visual-icon">🍄 + 🍄</div>
+                    <div class="text-3xl sm:text-4xl font-black text-gray-900" id="quiz-question-text">
+                        4 + 5 = ?
+                    </div>
+                    <p class="text-sm font-bold text-blue-600 mt-2" id="quiz-hint-text">
+                        머릿속으로 세어보거나 손가락으로 차근차근 더해보자!
+                    </p>
+                </div>
+
+                <!-- 4 Choice Options -->
+                <div class="grid grid-cols-2 gap-4" id="quiz-options-container">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Result & Next Banner -->
+                <div id="quiz-feedback" class="mt-6 p-4 rounded-2xl border-4 text-center hidden">
+                    <p class="text-2xl font-black mb-1" id="feedback-title"></p>
+                    <p class="text-base font-bold mb-3" id="feedback-desc"></p>
+                    <button id="next-math-btn" class="mario-btn bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-8 py-3 rounded-2xl font-black text-lg mx-auto block">
+                        다음 수학 문제 도전! 🚀
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- VIEW 3: RIDDLE GAME (Character guessing) -->
+        <section id="view-riddle" class="hidden max-w-xl mx-auto">
+            <div class="bg-white rounded-3xl p-6 sm:p-8 mario-box text-center relative border-4 border-black">
+                <span class="px-4 py-1 bg-yellow-300 text-yellow-900 font-black rounded-full text-sm inline-block mb-3 border-2 border-black">
+                    ❓ 슈퍼마리오 스무고개 놀이
+                </span>
+                <h2 class="text-3xl font-black text-red-600 mb-6 drop-shadow-sm">
+                    나는 누구일까요?
+                </h2>
+
+                <!-- Question Stage -->
+                <div id="riddle-question-card" class="space-y-4">
+                    <div class="w-32 h-32 mx-auto rounded-3xl question-block flex items-center justify-center text-6xl text-white font-black animate-float">
+                        ?
+                    </div>
+
+                    <div class="bg-amber-50 border-4 border-dashed border-amber-300 p-5 rounded-2xl text-left space-y-3">
+                        <p class="text-base sm:text-lg font-bold text-gray-800">
+                            <span class="text-red-500 font-black">🎨 내 색깔/외모:</span> <span id="riddle-hint-look"></span>
+                        </p>
+                        <p class="text-base sm:text-lg font-bold text-gray-800">
+                            <span class="text-blue-500 font-black">⚡ 내 특수 기술:</span> <span id="riddle-hint-skill"></span>
+                        </p>
+                        <p class="text-base sm:text-lg font-bold text-gray-800">
+                            <span class="text-emerald-500 font-black">💬 결정적 힌트:</span> <span id="riddle-hint-phrase" class="italic text-gray-700"></span>
+                        </p>
+                    </div>
+
+                    <button id="riddle-reveal-btn" class="w-full mario-btn bg-red-500 hover:bg-red-600 text-white font-black text-xl py-4 rounded-2xl">
+                        정답 확인하고 코인 받기! 🎁
+                    </button>
+                </div>
+
+                <!-- Answer Stage (Hidden initially) -->
+                <div id="riddle-answer-card" class="hidden space-y-4 pt-2">
+                    <div class="w-36 h-36 mx-auto rounded-3xl border-4 border-black bg-white p-2 shadow-inner overflow-hidden flex items-center justify-center" id="riddle-answer-img"></div>
+                    <div class="bg-yellow-100 border-2 border-yellow-400 p-4 rounded-2xl">
+                        <span class="text-xs font-bold text-yellow-800 uppercase tracking-widest block">정답은 바로!</span>
+                        <h3 class="text-3xl font-black text-red-600 mt-1" id="riddle-answer-name">마리오</h3>
+                        <p class="text-sm font-bold text-gray-600 mt-1" id="riddle-answer-desc"></p>
+                    </div>
+                    <div class="p-3 bg-emerald-100 rounded-xl border border-emerald-400 text-emerald-800 font-black text-sm flex items-center justify-center gap-2">
+                        <span>🎉 보너스 보상 지급 완료:</span>
+                        <span class="text-lg text-emerald-900">+1분 게임 시간 & 10 코인!</span>
+                    </div>
+                    <button id="next-riddle-btn" class="w-full mario-btn bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-black text-lg py-3 rounded-2xl">
+                        다음 수수께끼 풀기! 🎯
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL: Character Details -->
+    <div id="char-modal-backdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div id="char-modal" class="bg-white rounded-3xl p-6 max-w-md w-full mario-box border-4 border-black relative">
+            <button id="close-char-modal" class="absolute top-4 right-4 bg-gray-200 hover:bg-red-500 hover:text-white rounded-full w-10 h-10 font-black text-xl border-2 border-black flex items-center justify-center transition-colors">
+                ✕
+            </button>
+
+            <!-- Character Profile Header -->
+            <div class="text-center">
+                <div id="modal-char-avatar" class="w-32 h-32 mx-auto rounded-2xl border-4 border-black p-2 bg-yellow-50 mb-3 shadow-md flex items-center justify-center"></div>
+                <span id="modal-char-role" class="px-3 py-1 rounded-full text-xs font-black uppercase inline-block border-2 mb-1"></span>
+                <h3 id="modal-char-name" class="text-3xl font-black text-gray-900"></h3>
+                <p id="modal-char-tagline" class="text-sm text-gray-500 italic font-bold mb-4"></p>
+            </div>
+
+            <!-- Stats Bars (Speed, Power, Jump) -->
+            <div class="bg-gray-50 rounded-2xl p-4 border-2 border-gray-200 space-y-2 mb-4 text-sm font-bold">
+                <div class="flex items-center justify-between">
+                    <span class="text-blue-600">🏃 스피드:</span>
+                    <div class="w-36 bg-gray-200 rounded-full h-3.5 overflow-hidden border border-gray-400">
+                        <div id="modal-bar-speed" class="bg-blue-500 h-full rounded-full" style="width: 80%"></div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-red-600">💥 파워:</span>
+                    <div class="w-36 bg-gray-200 rounded-full h-3.5 overflow-hidden border border-gray-400">
+                        <div id="modal-bar-power" class="bg-red-500 h-full rounded-full" style="width: 80%"></div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-green-600">🦘 점프력:</span>
+                    <div class="w-36 bg-gray-200 rounded-full h-3.5 overflow-hidden border border-gray-400">
+                        <div id="modal-bar-jump" class="bg-green-500 h-full rounded-full" style="width: 80%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description & Skill -->
+            <div class="bg-yellow-50 rounded-2xl p-4 border-2 border-yellow-200 text-sm space-y-2 mb-4">
+                <p><span class="text-amber-800 font-black">✨ 특수 스킬:</span> <span id="modal-char-skill" class="font-bold text-gray-800"></span></p>
+                <p><span class="text-amber-800 font-black">📖 캐릭터 소개:</span> <span id="modal-char-desc" class="text-gray-700 font-semibold"></span></p>
+            </div>
+
+            <!-- Photo Upload Action -->
+            <div class="flex gap-2">
+                <input type="file" id="char-image-input" accept="image/*" class="hidden">
+                <button id="upload-char-pic-btn" class="mario-btn bg-gray-100 hover:bg-gray-200 text-gray-800 font-black py-2.5 px-4 rounded-xl text-sm flex items-center justify-center gap-1 w-full">
+                    📷 실물 사진으로 바꾸기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Nintendo Timer (Real Countdown for father and son) -->
+    <div id="timer-modal-backdrop" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div id="timer-modal" class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full mario-box border-4 border-black text-center relative">
+            <button id="close-timer-modal" class="absolute top-4 right-4 bg-gray-200 hover:bg-red-500 hover:text-white rounded-full w-10 h-10 font-black text-xl border-2 border-black flex items-center justify-center transition-colors">
+                ✕
+            </button>
+
+            <span class="text-4xl animate-bounce inline-block mb-1">🎮</span>
+            <h3 class="text-2xl sm:text-3xl font-black text-red-600 mb-2">닌텐도 시간 은행</h3>
+            <p class="text-sm font-bold text-gray-600 mb-6">수학 문제로 획득한 소중한 게임 시간이에요!</p>
+
+            <!-- Bank Balance Display -->
+            <div class="bg-yellow-100 border-4 border-yellow-400 rounded-2xl p-4 mb-6">
+                <span class="text-xs font-bold text-yellow-800 uppercase">현재 사용 가능한 적립 시간</span>
+                <div class="text-4xl font-black text-red-600 mt-1" id="timer-current-balance">0분</div>
+            </div>
+
+            <!-- Timer Active View (When timer is running) -->
+            <div id="active-timer-section" class="hidden bg-gray-900 text-yellow-400 p-6 rounded-3xl border-4 border-black mb-6">
+                <span class="text-xs uppercase tracking-widest text-gray-400 block mb-1">⏱️ 게임 시간 카운트다운 중</span>
+                <div class="pixel-font text-4xl sm:text-5xl font-black my-2" id="timer-countdown-display">
+                    00:00
+                </div>
+                <div class="flex justify-center gap-3 mt-4">
+                    <button id="stop-timer-btn" class="mario-btn bg-red-600 text-white font-black py-2 px-6 rounded-xl text-sm">
+                        ⏹️ 게임 끝내기 (중지)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Timer Starter Controls (When timer is idle) -->
+            <div id="idle-timer-section" class="space-y-4">
+                <p class="text-sm font-bold text-gray-700">사용할 게임 시간을 골라주세요:</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <button class="spend-time-btn mario-btn bg-blue-500 hover:bg-blue-600 text-white font-black py-3 rounded-xl text-sm sm:text-base" data-mins="10">
+                        10분 쓰기
+                    </button>
+                    <button class="spend-time-btn mario-btn bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 rounded-xl text-sm sm:text-base" data-mins="15">
+                        15분 쓰기
+                    </button>
+                    <button class="spend-time-btn mario-btn bg-purple-500 hover:bg-purple-600 text-white font-black py-3 rounded-xl text-sm sm:text-base" data-mins="30">
+                        30분 쓰기
+                    </button>
+                </div>
+                <div class="pt-2 border-t border-gray-200">
+                    <button id="spend-all-btn" class="w-full mario-btn bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-black py-3 rounded-xl text-base">
+                        ⭐ 적립된 시간 전부 시작하기!
+                    </button>
+                </div>
+            </div>
+
+            <!-- Parent Secret Adjust Option -->
+            <div class="mt-6 text-xs text-gray-400 flex justify-between items-center px-2">
+                <span>부모님용 수동 보정</span>
+                <div class="flex gap-1">
+                    <button id="add-five-manual" class="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded border border-gray-300 font-bold text-gray-600">+5분 선물</button>
+                    <button id="reset-bank-manual" class="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded border border-gray-300 font-bold text-red-500">초기화</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        /* Retro Audio Synthesizer (No external sound files required) */
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playTone(freq, type = 'square', duration = 0.1, delay = 0) {
+            if (!soundEnabled) return;
+            initAudio();
+            setTimeout(() => {
+                try {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + duration);
+                } catch(e){}
+            }, delay * 1000);
+        }
+
+        // Mario classic sound emulations
+        function playCoinSound() {
+            playTone(987.77, 'sine', 0.08, 0);      // B5
+            playTone(1318.51, 'sine', 0.28, 0.08);   // E6
+        }
+
+        function playPowerupSound() {
+            const notes = [330, 392, 659, 523, 587, 784];
+            notes.forEach((freq, idx) => playTone(freq, 'triangle', 0.08, idx * 0.06));
+        }
+
+        function playWrongSound() {
+            playTone(220, 'sawtooth', 0.15, 0);
+            playTone(180, 'sawtooth', 0.25, 0.12);
+        }
+
+        function playJumpSound() {
+            playTone(200, 'square', 0.05, 0);
+            playTone(400, 'square', 0.1, 0.04);
+        }
+
+        // Sound toggle button
+        const soundToggleBtn = document.getElementById('sound-toggle-btn');
+        soundToggleBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundToggleBtn.textContent = soundEnabled ? '🔊' : '🔇';
+            if (soundEnabled) playCoinSound();
+        });
+
+        // Custom SVG Generator for high-resolution, unblockable Super Mario characters
+        function getMarioCharacterSVG(charId) {
+            switch(charId) {
+                case 'mario':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Cap -->
+                        <path d="M 20 38 Q 50 15 80 38 L 86 46 Q 50 42 20 46 Z" fill="#E52521"/>
+                        <circle cx="50" cy="30" r="8" fill="#FFF"/>
+                        <text x="50" y="34" font-size="10" font-weight="900" fill="#E52521" text-anchor="middle">M</text>
+                        <!-- Face -->
+                        <circle cx="50" cy="54" r="22" fill="#F8CBA6"/>
+                        <!-- Big Nose -->
+                        <circle cx="50" cy="52" r="8" fill="#F0B58D"/>
+                        <!-- Eyes -->
+                        <ellipse cx="40" cy="46" rx="3.5" ry="5.5" fill="#000"/>
+                        <circle cx="39" cy="44" r="1.5" fill="#FFF"/>
+                        <ellipse cx="60" cy="46" rx="3.5" ry="5.5" fill="#000"/>
+                        <circle cx="59" cy="44" r="1.5" fill="#FFF"/>
+                        <!-- Famous Mustache -->
+                        <path d="M 32 58 Q 42 66 50 58 Q 58 66 68 58 Q 50 63 32 58 Z" fill="#4A2E18"/>
+                        <!-- Red Shirt & Blue Overalls -->
+                        <path d="M 30 76 L 70 76 L 66 96 L 34 96 Z" fill="#E52521"/>
+                        <path d="M 38 78 L 46 96 L 54 96 L 62 78 Z" fill="#0066B2"/>
+                        <circle cx="41" cy="85" r="2" fill="#FCD116"/>
+                        <circle cx="59" cy="85" r="2" fill="#FCD116"/>
+                    </svg>`;
+                case 'luigi':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Green Cap -->
+                        <path d="M 22 36 Q 50 12 78 36 L 85 44 Q 50 40 20 44 Z" fill="#00A651"/>
+                        <circle cx="50" cy="28" r="8" fill="#FFF"/>
+                        <text x="50" y="32" font-size="10" font-weight="900" fill="#00A651" text-anchor="middle">L</text>
+                        <!-- Thinner Face -->
+                        <ellipse cx="50" cy="54" rx="20" ry="24" fill="#F8CBA6"/>
+                        <!-- Big Oval Nose -->
+                        <ellipse cx="50" cy="52" rx="7" ry="9" fill="#F0B58D"/>
+                        <!-- Eyes -->
+                        <ellipse cx="41" cy="45" rx="3" ry="5.5" fill="#000"/>
+                        <circle cx="40" cy="43" r="1.5" fill="#FFF"/>
+                        <ellipse cx="59" cy="45" rx="3" ry="5.5" fill="#000"/>
+                        <circle cx="58" cy="43" r="1.5" fill="#FFF"/>
+                        <!-- Luigi Mustache -->
+                        <path d="M 34 58 Q 42 64 50 58 Q 58 64 66 58 Q 50 62 34 58 Z" fill="#332011"/>
+                        <!-- Overalls -->
+                        <path d="M 32 78 L 68 78 L 65 96 L 35 96 Z" fill="#00A651"/>
+                        <path d="M 39 80 L 47 96 L 53 96 L 61 80 Z" fill="#003E8A"/>
+                        <circle cx="42" cy="86" r="2" fill="#FCD116"/>
+                        <circle cx="58" cy="86" r="2" fill="#FCD116"/>
+                    </svg>`;
+                case 'peach':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Golden Crown -->
+                        <path d="M 40 22 L 44 14 L 50 20 L 56 14 L 60 22 Z" fill="#FCD116" stroke="#000" stroke-width="1.5"/>
+                        <circle cx="50" cy="18" r="2" fill="#00B4D8"/>
+                        <circle cx="43" cy="19" r="1.5" fill="#E52521"/>
+                        <circle cx="57" cy="19" r="1.5" fill="#E52521"/>
+                        <!-- Blonde Hair -->
+                        <path d="M 24 35 Q 50 24 76 35 Q 86 60 78 75 Q 70 55 68 45 Q 32 45 30 55 Q 22 65 24 35 Z" fill="#FFE57F"/>
+                        <!-- Face -->
+                        <circle cx="50" cy="50" r="19" fill="#FFDFC4"/>
+                        <!-- Blue Eyes -->
+                        <ellipse cx="43" cy="48" rx="3" ry="5" fill="#0096C7"/>
+                        <circle cx="42" cy="46" r="1.2" fill="#FFF"/>
+                        <ellipse cx="57" cy="48" rx="3" ry="5" fill="#0096C7"/>
+                        <circle cx="56" cy="46" r="1.2" fill="#FFF"/>
+                        <!-- Blush & Smile -->
+                        <circle cx="38" cy="55" r="3" fill="#FF80AB" opacity="0.6"/>
+                        <circle cx="62" cy="55" r="3" fill="#FF80AB" opacity="0.6"/>
+                        <path d="M 47 56 Q 50 59 53 56" stroke="#C2185B" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <!-- Pink Royal Dress -->
+                        <path d="M 32 74 Q 50 70 68 74 L 75 96 L 25 96 Z" fill="#F48FB1"/>
+                        <circle cx="50" cy="74" r="5" fill="#00B4D8"/>
+                    </svg>`;
+                case 'toad':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Mushroom Hat -->
+                        <circle cx="50" cy="38" r="28" fill="#FFF" stroke="#000" stroke-width="2"/>
+                        <circle cx="50" cy="24" r="9" fill="#E52521"/>
+                        <circle cx="28" cy="38" r="8" fill="#E52521"/>
+                        <circle cx="72" cy="38" r="8" fill="#E52521"/>
+                        <!-- Face -->
+                        <ellipse cx="50" cy="62" rx="19" ry="16" fill="#F8CBA6" stroke="#000" stroke-width="2"/>
+                        <!-- Cute Eyes -->
+                        <ellipse cx="43" cy="58" rx="2.5" ry="6" fill="#000"/>
+                        <ellipse cx="57" cy="58" rx="2.5" ry="6" fill="#000"/>
+                        <!-- Big Smile -->
+                        <path d="M 45 66 Q 50 72 55 66" stroke="#000" stroke-width="2" fill="#D32F2F"/>
+                        <!-- Blue Vest -->
+                        <path d="M 35 78 L 65 78 L 68 96 L 32 96 Z" fill="#0066B2"/>
+                        <path d="M 45 78 L 45 96 L 55 96 L 55 78 Z" fill="#FFF"/>
+                        <line x1="38" y1="78" x2="38" y2="96" stroke="#FCD116" stroke-width="2"/>
+                        <line x1="62" y1="78" x2="62" y2="96" stroke="#FCD116" stroke-width="2"/>
+                    </svg>`;
+                case 'yoshi':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Big Green Snout -->
+                        <circle cx="40" cy="52" r="22" fill="#4CAF50" stroke="#000" stroke-width="2"/>
+                        <circle cx="34" cy="46" r="2" fill="#000"/>
+                        <!-- Eyes on top -->
+                        <ellipse cx="55" cy="34" rx="9" ry="14" fill="#FFF" stroke="#000" stroke-width="2"/>
+                        <ellipse cx="56" cy="36" rx="4" ry="7" fill="#000"/>
+                        <circle cx="54" cy="34" r="1.5" fill="#FFF"/>
+                        <ellipse cx="44" cy="36" rx="7" ry="11" fill="#FFF" stroke="#000" stroke-width="2"/>
+                        <ellipse cx="44" cy="38" rx="3.5" ry="5.5" fill="#000"/>
+                        <!-- Cheek & Red Spikes -->
+                        <circle cx="56" cy="54" r="16" fill="#4CAF50"/>
+                        <path d="M 68 34 L 78 40 L 68 46 L 78 52 L 68 58" fill="#E52521" stroke="#000" stroke-width="1.5"/>
+                        <!-- White Cheeks -->
+                        <ellipse cx="46" cy="64" rx="14" ry="10" fill="#FFF"/>
+                        <!-- Green Body / Orange Shoes -->
+                        <ellipse cx="55" cy="80" rx="16" ry="14" fill="#4CAF50"/>
+                        <circle cx="65" cy="74" r="6" fill="#E52521" stroke="#000" stroke-width="1.5"/>
+                    </svg>`;
+                case 'bowser':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Spiky Red Hair -->
+                        <path d="M 38 20 L 46 8 L 52 18 L 60 6 L 64 20 Z" fill="#E52521" stroke="#000" stroke-width="1.5"/>
+                        <!-- Horns -->
+                        <path d="M 32 30 Q 18 20 24 10 Q 34 20 36 28 Z" fill="#FFE57F" stroke="#000" stroke-width="1.5"/>
+                        <path d="M 68 30 Q 82 20 76 10 Q 66 20 64 28 Z" fill="#FFE57F" stroke="#000" stroke-width="1.5"/>
+                        <!-- Head -->
+                        <circle cx="50" cy="42" r="22" fill="#8BC34A" stroke="#000" stroke-width="2"/>
+                        <!-- Angry Eyebrows & Red Eyes -->
+                        <path d="M 34 34 L 46 40 L 44 42 L 32 38 Z" fill="#E52521"/>
+                        <circle cx="42" cy="42" r="4" fill="#F44336"/>
+                        <circle cx="42" cy="42" r="1.5" fill="#000"/>
+                        <path d="M 66 34 L 54 40 L 56 42 L 68 38 Z" fill="#E52521"/>
+                        <circle cx="58" cy="42" r="4" fill="#F44336"/>
+                        <circle cx="58" cy="42" r="1.5" fill="#000"/>
+                        <!-- Massive Snout with Sharp Fangs -->
+                        <ellipse cx="50" cy="58" rx="20" ry="14" fill="#FFCC80" stroke="#000" stroke-width="2"/>
+                        <polygon points="40,54 44,62 38,62" fill="#FFF" stroke="#000"/>
+                        <polygon points="60,54 56,62 62,62" fill="#FFF" stroke="#000"/>
+                        <!-- Spiked Collar -->
+                        <rect x="28" y="72" width="44" height="10" rx="3" fill="#212121"/>
+                        <polygon points="34,70 38,76 30,76" fill="#FFF"/>
+                        <polygon points="50,70 54,76 46,76" fill="#FFF"/>
+                        <polygon points="66,70 70,76 62,76" fill="#FFF"/>
+                        <!-- Green Shell with Spikes -->
+                        <path d="M 25 80 Q 50 72 75 80 L 80 96 L 20 96 Z" fill="#2E7D32" stroke="#000" stroke-width="2"/>
+                    </svg>`;
+                case 'goomba':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Mushroom Head -->
+                        <path d="M 20 65 C 10 30 90 30 80 65 C 70 72 30 72 20 65 Z" fill="#8D6E63" stroke="#000" stroke-width="2.5"/>
+                        <!-- Angry Eyebrows -->
+                        <path d="M 28 42 L 46 52 L 44 55 L 26 45 Z" fill="#000"/>
+                        <path d="M 72 42 L 54 52 L 56 55 L 74 45 Z" fill="#000"/>
+                        <!-- Eyes -->
+                        <ellipse cx="38" cy="52" rx="4" ry="6" fill="#FFF"/>
+                        <circle cx="40" cy="52" r="2.5" fill="#000"/>
+                        <ellipse cx="62" cy="52" rx="4" ry="6" fill="#FFF"/>
+                        <circle cx="60" cy="52" r="2.5" fill="#000"/>
+                        <!-- Two Fangs -->
+                        <polygon points="34,68 38,60 42,68" fill="#FFF" stroke="#000"/>
+                        <polygon points="58,68 62,60 66,68" fill="#FFF" stroke="#000"/>
+                        <!-- Feet -->
+                        <ellipse cx="34" cy="78" rx="14" ry="8" fill="#3E2723" stroke="#000" stroke-width="2"/>
+                        <ellipse cx="66" cy="78" rx="14" ry="8" fill="#3E2723" stroke="#000" stroke-width="2"/>
+                    </svg>`;
+                case 'koopa':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Koopa Head with Beak -->
+                        <ellipse cx="44" cy="38" rx="16" ry="14" fill="#FFEB3B" stroke="#000" stroke-width="2"/>
+                        <path d="M 30 38 Q 22 46 32 50 Z" fill="#FFD54F" stroke="#000" stroke-width="1.5"/>
+                        <!-- Eyes -->
+                        <ellipse cx="45" cy="34" rx="4" ry="7" fill="#FFF" stroke="#000" stroke-width="1.5"/>
+                        <circle cx="46" cy="34" r="2" fill="#000"/>
+                        <!-- Green Shell with Hexagon pattern -->
+                        <ellipse cx="55" cy="66" rx="24" ry="26" fill="#4CAF50" stroke="#000" stroke-width="2.5"/>
+                        <circle cx="55" cy="66" r="14" fill="none" stroke="#FFF" stroke-width="2.5"/>
+                        <!-- White Rim -->
+                        <ellipse cx="55" cy="78" rx="22" ry="6" fill="#FFF" stroke="#000" stroke-width="2"/>
+                        <!-- Orange Shoes -->
+                        <ellipse cx="42" cy="90" rx="10" ry="6" fill="#FF9800" stroke="#000" stroke-width="1.5"/>
+                        <ellipse cx="66" cy="90" rx="10" ry="6" fill="#FF9800" stroke="#000" stroke-width="1.5"/>
+                    </svg>`;
+                case 'boo':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Round Ghost Body -->
+                        <circle cx="50" cy="50" r="32" fill="#FFF" stroke="#000" stroke-width="2.5"/>
+                        <!-- Cute Ghost Hands -->
+                        <ellipse cx="20" cy="46" rx="8" ry="5" fill="#FFF" stroke="#000" stroke-width="2" transform="rotate(-30 20 46)"/>
+                        <ellipse cx="80" cy="46" rx="8" ry="5" fill="#FFF" stroke="#000" stroke-width="2" transform="rotate(30 80 46)"/>
+                        <!-- Mischievous Eyes -->
+                        <ellipse cx="40" cy="40" rx="4" ry="7" fill="#000"/>
+                        <ellipse cx="60" cy="40" rx="4" ry="7" fill="#000"/>
+                        <!-- Big Open Mouth with Sharp Tongue -->
+                        <path d="M 35 56 Q 50 78 65 56 Z" fill="#D32F2F" stroke="#000" stroke-width="2"/>
+                        <polygon points="40,56 44,64 48,56" fill="#FFF"/>
+                        <polygon points="52,56 56,64 60,56" fill="#FFF"/>
+                    </svg>`;
+                case 'donkeykong':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- DK Head tuft -->
+                        <path d="M 45 18 L 50 10 L 55 18 Z" fill="#5D4037"/>
+                        <circle cx="50" cy="40" r="26" fill="#5D4037" stroke="#000" stroke-width="2"/>
+                        <!-- Face Mask -->
+                        <ellipse cx="50" cy="42" rx="19" ry="15" fill="#D7CCC8"/>
+                        <!-- Eyes -->
+                        <ellipse cx="43" cy="36" rx="3.5" ry="5" fill="#000"/>
+                        <circle cx="42" cy="34" r="1.5" fill="#FFF"/>
+                        <ellipse cx="57" cy="36" rx="3.5" ry="5" fill="#000"/>
+                        <circle cx="56" cy="34" r="1.5" fill="#FFF"/>
+                        <!-- Big Friendly Snout -->
+                        <ellipse cx="50" cy="56" rx="20" ry="12" fill="#D7CCC8" stroke="#000" stroke-width="1.5"/>
+                        <circle cx="44" cy="52" r="2" fill="#5D4037"/>
+                        <circle cx="56" cy="52" r="2" fill="#5D4037"/>
+                        <!-- Red Tie with "DK" -->
+                        <polygon points="45,68 55,68 58,96 50,100 42,96" fill="#E52521" stroke="#000" stroke-width="1.5"/>
+                        <text x="50" y="86" font-size="9" font-weight="900" fill="#FCD116" text-anchor="middle">DK</text>
+                    </svg>`;
+                case 'bowserjr':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Topknot Hair -->
+                        <path d="M 46 22 L 50 10 L 54 22 Z" fill="#E52521" stroke="#000"/>
+                        <!-- Little Horns -->
+                        <polygon points="34,28 30,18 40,24" fill="#FFE57F" stroke="#000"/>
+                        <polygon points="66,28 70,18 60,24" fill="#FFE57F" stroke="#000"/>
+                        <!-- Green Head -->
+                        <circle cx="50" cy="40" r="18" fill="#8BC34A" stroke="#000" stroke-width="2"/>
+                        <!-- Big Bandana Mask with Sharp Teeth Drawing -->
+                        <path d="M 28 50 Q 50 78 72 50 L 68 76 Q 50 86 32 76 Z" fill="#FFF" stroke="#000" stroke-width="2"/>
+                        <path d="M 38 60 L 42 66 L 46 60 L 50 66 L 54 60 L 58 66 L 62 60" stroke="#000" stroke-width="2" fill="none"/>
+                        <!-- Eyes -->
+                        <circle cx="43" cy="38" r="3.5" fill="#000"/>
+                        <circle cx="57" cy="38" r="3.5" fill="#000"/>
+                    </svg>`;
+                case 'piranha':
+                    return `
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- Green Pipe Base -->
+                        <rect x="25" y="70" width="50" height="26" fill="#00A651" stroke="#000" stroke-width="2"/>
+                        <rect x="20" y="62" width="60" height="12" fill="#00843D" stroke="#000" stroke-width="2"/>
+                        <!-- Red Bulb Head with Polka Dots -->
+                        <circle cx="50" cy="36" r="24" fill="#E52521" stroke="#000" stroke-width="2"/>
+                        <circle cx="40" cy="24" r="4" fill="#FFF"/>
+                        <circle cx="62" cy="26" r="5" fill="#FFF"/>
+                        <circle cx="36" cy="44" r="3" fill="#FFF"/>
+                        <circle cx="64" cy="44" r="3" fill="#FFF"/>
+                        <!-- Big Open White Lips with Fangs -->
+                        <ellipse cx="50" cy="38" rx="16" ry="12" fill="#000"/>
+                        <polygon points="40,30 44,38 48,30" fill="#FFF"/>
+                        <polygon points="52,30 56,38 60,30" fill="#FFF"/>
+                        <polygon points="44,46 48,38 52,46" fill="#FFF"/>
+                    </svg>`;
+                default:
+                    return `<div class="text-4xl text-center">🍄</div>`;
+            }
+        }
+
+        const marioCharacters = [
+            {
+                id: 'mario', name: '마리오 (Mario)', category: 'hero', role: '버섯 왕국의 불멸의 영웅',
+                speed: 85, power: 85, jump: 90,
+                skill: '파이어볼 & 슈퍼 점프',
+                phrase: 'It\'s-a me, Mario! (나야, 마리오!)',
+                desc: '점프와 파이어 플라워로 피치 공주와 버섯 왕국을 지키는 최고의 슈퍼 배관공입니다.',
+                colorHex: '#E52521', borderClass: 'border-red-500', bgClass: 'bg-red-50',
+                riddleHint: '빨간 모자에 멋진 콧수염을 기르고, 멜빵바지를 입은 버섯 왕국의 주인공이야!'
+            },
+            {
+                id: 'luigi', name: '루이지 (Luigi)', category: 'hero', role: '유령 퇴치의 점프 달인',
+                speed: 80, power: 75, jump: 98,
+                skill: '유령싹싹 청소기 흡입',
+                phrase: 'Luigi time! (루이지 타임!)',
+                desc: '마리오의 착하고 다정한 동생입니다. 겁은 많지만 마리오보다 점프력이 훨씬 더 높습니다.',
+                colorHex: '#00A651', borderClass: 'border-green-500', bgClass: 'bg-green-50',
+                riddleHint: '초록색 모자를 썼고, 키가 크고 날씬해. 유령을 무서워하지만 점프 실력은 최고지!'
+            },
+            {
+                id: 'peach', name: '피치 공주 (Peach)', category: 'hero', role: '버섯 왕국의 아름다운 통치자',
+                speed: 75, power: 70, jump: 92,
+                skill: '드레스 공중 부양 & 하트 파워',
+                phrase: 'Thank you, Mario! (고마워요, 마리오!)',
+                desc: '핑크빛 드레스를 입고 우아하게 날아오르는 버섯 왕국의 공주님입니다.',
+                colorHex: '#F48FB1', borderClass: 'border-pink-400', bgClass: 'bg-pink-50',
+                riddleHint: '금발 머리에 금빛 왕관을 쓰고, 언제나 예쁜 분홍색 드레스를 입고 있는 공주님이야.'
+            },
+            {
+                id: 'toad', name: '키노피오 (Toad)', category: 'hero', role: '버섯 왕국의 스피드 대장',
+                speed: 98, power: 65, jump: 70,
+                skill: '초스피드 대시 & 파워 리프트',
+                phrase: 'Yahoo! (야호!)',
+                desc: '빨간 물방울무늬 버섯 모자를 쓴 귀여운 요정입니다. 체구는 작지만 달리기 속도는 1등입니다.',
+                colorHex: '#0066B2', borderClass: 'border-blue-400', bgClass: 'bg-blue-50',
+                riddleHint: '빨간 땡땡이 버섯 머리를 하고, 파란 조끼를 입었어. 발이 엄청나게 빠르지!'
+            },
+            {
+                id: 'yoshi', name: '요시 (Yoshi)', category: 'hero', role: '마리오의 든든한 공룡 파트너',
+                speed: 90, power: 80, jump: 95,
+                skill: '긴 혀 꿀꺽 & 알 던지기',
+                phrase: 'Yoshi! (요시~!)',
+                desc: '무엇이든 긴 혀로 꿀꺽 삼키고 알로 만들어 던지는 친절하고 용감한 초록 공룡입니다.',
+                colorHex: '#4CAF50', borderClass: 'border-emerald-500', bgClass: 'bg-emerald-50',
+                riddleHint: '초록색 등에 빨간 안장이 있고 긴 혀로 적을 꿀꺽 삼켜 알을 낳는 귀여운 공룡이야.'
+            },
+            {
+                id: 'donkeykong', name: '동키콩 (Donkey Kong)', category: 'hero', role: '정글의 파워 하우스',
+                speed: 70, power: 99, jump: 75,
+                skill: '자이언트 펀치 & 땅치기',
+                phrase: '바나나 내놔 크앙!',
+                desc: '빨간 넥타이를 매고 엄청난 괴력으로 적을 날려버리는 정글의 왕 고릴라입니다.',
+                colorHex: '#8D6E63', borderClass: 'border-amber-700', bgClass: 'bg-amber-50',
+                riddleHint: '목에 빨간색 DK 넥타이를 매고 바나나를 제일 좋아하는 무시무시한 힘을 가진 고릴라야!'
+            },
+            {
+                id: 'bowser', name: '쿠파 (Bowser)', category: 'villain', role: '쿠파 군단 대마왕',
+                speed: 60, power: 100, jump: 65,
+                skill: '불꽃 방사 & 등껍질 회전 돌진',
+                phrase: 'Bwahahaha! (크하하하!)',
+                desc: '가시 돋친 등껍질과 불을 뿜는 거대한 대마왕으로, 피치 공주를 납치하려는 최강 빌런입니다.',
+                colorHex: '#E65100', borderClass: 'border-orange-600', bgClass: 'bg-orange-50',
+                riddleHint: '가시가 달린 초록 등껍질을 매고 입에서 활활 타오르는 화염을 뿜는 대마왕이야!'
+            },
+            {
+                id: 'bowserjr', name: '쿠파주니어 (Bowser Jr.)', category: 'villain', role: '천재 장난꾸러기 왕자',
+                speed: 85, power: 80, jump: 80,
+                skill: '매직 브러시 낙서 & 클라운카',
+                phrase: '아빠를 도와 마리오를 혼내줄 테다!',
+                desc: '뾰족한 이빨 그림이 그려진 손수건 마스크를 쓰고 공중 비행선을 타는 쿠파의 똑똑한 아들입니다.',
+                colorHex: '#8BC34A', borderClass: 'border-lime-500', bgClass: 'bg-lime-50',
+                riddleHint: '입에 무서운 이빨이 그려진 마스크 손수건을 두르고 비행선을 타고 다니는 쿠파의 아들이야.'
+            },
+            {
+                id: 'goomba', name: '굼바 (Goomba)', category: 'villain', role: '쿠파 군단의 선봉 보병',
+                speed: 50, power: 55, jump: 40,
+                skill: '박치기 돌진',
+                phrase: '쿵쿵 걸어간다!',
+                desc: '버섯 왕국을 배신하고 쿠파 편에 선 뾰로통한 버섯 모양의 몬스터입니다. 밟히면 납작해집니다.',
+                colorHex: '#795548', borderClass: 'border-yellow-800', bgClass: 'bg-yellow-50',
+                riddleHint: '화난 눈썹을 하고 이빨 두 개가 삐져나온 갈색 버섯 모양 몬스터야. 위에서 밟으면 쓰러져!'
+            },
+            {
+                id: 'koopa', name: '엉금엉금 (Koopa Troopa)', category: 'villain', role: '단단한 등껍질 병사',
+                speed: 65, power: 65, jump: 60,
+                skill: '등껍질 숨기 & 튕겨차기',
+                phrase: '쏙 들어가기!',
+                desc: '초록색 등껍질 속에 쏙 숨어버리는 거북이입니다. 밟히면 등껍질이 굴러가 적들을 쓸어버립니다.',
+                colorHex: '#4CAF50', borderClass: 'border-green-600', bgClass: 'bg-green-50',
+                riddleHint: '초록색 등껍질을 멘 거북이야. 마리오가 밟으면 껍질 속에 쏙 들어가서 굴러가지!'
+            },
+            {
+                id: 'boo', name: '부끄부끄 (Boo)', category: 'villain', role: '부끄럼쟁이 유령',
+                speed: 70, power: 75, jump: 99,
+                skill: '벽 통과하기 & 깜짝 놀래키기',
+                phrase: '쳐다보면 부끄러워!',
+                desc: '마리오가 마주 보면 손으로 얼굴을 가리며 부끄러워하지만, 등을 돌리면 쫓아오는 하얀 유령입니다.',
+                colorHex: '#9E9E9E', borderClass: 'border-gray-400', bgClass: 'bg-gray-100',
+                riddleHint: '하얗고 둥근 유령이야. 쳐다보면 얼굴을 가리고 부끄러워하고, 뒤돌아서면 쫓아오지!'
+            },
+            {
+                id: 'piranha', name: '뻐끔플라워 (Piranha Plant)', category: 'villain', role: '토관 속 매복 식물',
+                speed: 40, power: 90, jump: 30,
+                skill: '토관 기습 덥석물기',
+                phrase: '덥석덥석!',
+                desc: '초록색 토관 안에서 쑥 튀어나와 날카로운 이빨로 무엇이든 덥석 무는 빨간 식물 몬스터입니다.',
+                colorHex: '#D32F2F', borderClass: 'border-red-600', bgClass: 'bg-red-50',
+                riddleHint: '초록색 토관 안에 살면서 마리오가 가까이 오면 쑥 튀어나와 덥석 무는 빨간 식물이야!'
+            }
+        ];
+
+        // LocalStorage Bank Management
+        let userBank = {
+            coins: 0,
+            nintendoMinutes: 0,
+            customImages: {}
+        };
+
+        function loadSavedData() {
+            try {
+                const saved = localStorage.getItem('mario_math_bank_v1');
+                if (saved) {
+                    userBank = JSON.parse(saved);
+                }
+            } catch(e) {}
+            updateHUD();
+        }
+
+        function saveBankData() {
+            try {
+                localStorage.setItem('mario_math_bank_v1', JSON.stringify(userBank));
+            } catch(e) {}
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-coin-count').textContent = userBank.coins || 0;
+            document.getElementById('hud-time-bank').textContent = (userBank.nintendoMinutes || 0) + '분';
+            document.getElementById('timer-current-balance').textContent = (userBank.nintendoMinutes || 0) + '분';
+        }
+
+        function addGameReward(mins, coins) {
+            userBank.nintendoMinutes = (userBank.nintendoMinutes || 0) + mins;
+            userBank.coins = (userBank.coins || 0) + coins;
+            saveBankData();
+            triggerConfetti();
+        }
+
+        const charGrid = document.getElementById('character-grid');
+        let selectedCharacter = null;
+
+        function getCharRender(char) {
+            if (userBank.customImages && userBank.customImages[char.id]) {
+                return `<img src="${userBank.customImages[char.id]}" alt="${char.name}" class="w-full h-full object-cover rounded-xl">`;
+            }
+            return getMarioCharacterSVG(char.id);
+        }
+
+        function renderEncyclopedia(filter = 'all') {
+            charGrid.innerHTML = '';
+            const list = filter === 'all' 
+                ? marioCharacters 
+                : marioCharacters.filter(c => c.category === filter);
+
+            list.forEach(char => {
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-3xl p-5 mario-box ${char.borderClass} cursor-pointer hover:scale-105 active:scale-95 transition-all duration-200 flex flex-col items-center text-center relative overflow-hidden group`;
+                
+                card.innerHTML = `
+                    <div class="w-full h-14 ${char.bgClass} absolute top-0 left-0 border-b-2 border-black/10"></div>
+                    <div class="w-24 h-24 rounded-2xl border-4 border-black bg-white p-1 shadow-md z-10 mb-3 flex items-center justify-center overflow-hidden group-hover:rotate-6 transition-transform">
+                        ${getCharRender(char)}
+                    </div>
+                    <span class="z-10 px-3 py-0.5 rounded-full text-xs font-black border-2 border-black ${char.category === 'hero' ? 'bg-yellow-300 text-yellow-900' : 'bg-red-400 text-white'} mb-1">
+                        ${char.role}
+                    </span>
+                    <h3 class="z-10 text-xl font-black text-gray-800">${char.name.split(' ')[0]}</h3>
+                    <p class="z-10 text-xs font-bold text-gray-500 mt-1">스킬: ${char.skill}</p>
+                    <button class="mt-3 z-10 text-xs font-black bg-gray-100 hover:bg-yellow-300 px-3 py-1.5 rounded-xl border-2 border-black">
+                        능력치 보기 🔍
+                    </button>
+                `;
+
+                card.addEventListener('click', () => openCharModal(char));
+                charGrid.appendChild(card);
+            });
+        }
+
+        // Character detail modal
+        const charModalBackdrop = document.getElementById('char-modal-backdrop');
+        const closeCharModalBtn = document.getElementById('close-char-modal');
+        const uploadCharPicBtn = document.getElementById('upload-char-pic-btn');
+        const charImageInput = document.getElementById('char-image-input');
+
+        function openCharModal(char) {
+            selectedCharacter = char;
+            playJumpSound();
+
+            document.getElementById('modal-char-avatar').innerHTML = getCharRender(char);
+            document.getElementById('modal-char-name').textContent = char.name;
+            document.getElementById('modal-char-tagline').textContent = `"${char.phrase}"`;
+            
+            const roleEl = document.getElementById('modal-char-role');
+            roleEl.textContent = char.role;
+            roleEl.className = `px-3 py-1 rounded-full text-xs font-black uppercase inline-block border-2 mb-1 ${char.category === 'hero' ? 'bg-yellow-300 border-black text-gray-900' : 'bg-red-500 border-black text-white'}`;
+            
+            // Fill stats
+            document.getElementById('modal-bar-speed').style.width = char.speed + '%';
+            document.getElementById('modal-bar-power').style.width = char.power + '%';
+            document.getElementById('modal-bar-jump').style.width = char.jump + '%';
+
+            document.getElementById('modal-char-skill').textContent = char.skill;
+            document.getElementById('modal-char-desc').textContent = char.desc;
+
+            charModalBackdrop.classList.remove('hidden');
+        }
+
+        closeCharModalBtn.addEventListener('click', () => {
+            charModalBackdrop.classList.add('hidden');
+        });
+
+        charModalBackdrop.addEventListener('click', (e) => {
+            if (e.target === charModalBackdrop) charModalBackdrop.classList.add('hidden');
+        });
+
+        // Photo replacement logic
+        uploadCharPicBtn.addEventListener('click', () => charImageInput.click());
+        charImageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file || !selectedCharacter) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                if (!userBank.customImages) userBank.customImages = {};
+                userBank.customImages[selectedCharacter.id] = event.target.result;
+                saveBankData();
+                document.getElementById('modal-char-avatar').innerHTML = getCharRender(selectedCharacter);
+                renderEncyclopedia(document.querySelector('.filter-btn.active')?.dataset.filter || 'all');
+                playPowerupSound();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Math Quest Engine (Tailored specifically for Korean 1st Grade: 초등 1학년)
+        let currentQuiz = null;
+        let currentStreak = 0;
+
+        function generateGrade1Math() {
+            // 5 categories suitable for Grade 1
+            const types = ['add', 'subtract', 'evenOdd', 'compare', 'pattern'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            let question = '';
+            let hint = '';
+            let visual = '';
+            let correctAnswer = '';
+            let options = [];
+            let title = '';
+
+            if (type === 'add') {
+                title = '🍄 파이어 플라워 덧셈 퀘스트!';
+                const a = Math.floor(Math.random() * 9) + 2; // 2 ~ 10
+                const b = Math.floor(Math.random() * 8) + 1; // 1 ~ 8
+                const sum = a + b;
+                question = `${a} + ${b} = ?`;
+                hint = `${a}에 ${b}를 더하면 얼마가 될까?`;
+                visual = '🍄 ' + '★'.repeat(Math.min(a, 5)) + ' + ' + '★'.repeat(Math.min(b, 5));
+                correctAnswer = sum.toString();
+
+                const wrong1 = (sum + 1).toString();
+                const wrong2 = (sum - 1 > 0 ? sum - 1 : sum + 2).toString();
+                const wrong3 = (sum + 2).toString();
+                options = [correctAnswer, wrong1, wrong2, wrong3];
+
+            } else if (type === 'subtract') {
+                title = '🛡️ 쿠파 군단 물리치기 뺄셈!';
+                const a = Math.floor(Math.random() * 9) + 7; // 7 ~ 15
+                const b = Math.floor(Math.random() * 6) + 1; // 1 ~ 6
+                const diff = a - b;
+                question = `${a} - ${b} = ?`;
+                hint = `${a}개 중에서 ${b}개를 슝 빼버리자!`;
+                visual = '🐢 💨 💨';
+                correctAnswer = diff.toString();
+
+                const wrong1 = (diff + 1).toString();
+                const wrong2 = (diff - 1 >= 0 ? diff - 1 : diff + 3).toString();
+                const wrong3 = (diff + 2).toString();
+                options = [correctAnswer, wrong1, wrong2, wrong3];
+
+            } else if (type === 'evenOdd') {
+                title = '🚩 키노피오의 짝수 & 홀수 깃발!';
+                const askEven = Math.random() > 0.5;
+                if (askEven) {
+                    question = '다음 중 둘씩 짝지을 수 있는 [짝수]는?';
+                    hint = '2, 4, 6, 8, 10 처럼 둘씩 짝을 맞출 수 있는 수야!';
+                    visual = '🍒 🍒 🍒';
+                    const even = [2, 4, 6, 8, 10, 12][Math.floor(Math.random() * 6)];
+                    const odds = [1, 3, 5, 7, 9, 11].sort(() => 0.5 - Math.random()).slice(0, 3);
+                    correctAnswer = even.toString();
+                    options = [correctAnswer, odds[0].toString(), odds[1].toString(), odds[2].toString()];
+                } else {
+                    question = '다음 중 짝이 맞지 않는 [홀수]는?';
+                    hint = '1, 3, 5, 7, 9 처럼 하나가 남는 외로운 수야!';
+                    visual = '⭐ ⭐ ⭐';
+                    const odd = [1, 3, 5, 7, 9, 11][Math.floor(Math.random() * 6)];
+                    const evens = [2, 4, 6, 8, 10, 12].sort(() => 0.5 - Math.random()).slice(0, 3);
+                    correctAnswer = odd.toString();
+                    options = [correctAnswer, evens[0].toString(), evens[1].toString(), evens[2].toString()];
+                }
+
+            } else if (type === 'compare') {
+                title = '👑 슈퍼스타 크기 비교 챌린지!';
+                const a = Math.floor(Math.random() * 15) + 5;
+                let b = Math.floor(Math.random() * 15) + 5;
+                while (a === b) b = Math.floor(Math.random() * 15) + 5;
+                
+                const bigger = Math.max(a, b);
+                question = `[ ${a} ] 와 [ ${b} ] 중에서 <br><span class="text-red-500">더 큰 수</span>는 어느 것일까요?`;
+                hint = '수 막대가 더 길거나 계단에서 더 높은 층에 있는 수야!';
+                visual = '⚖️ 어느 쪽이 더 클까?';
+                correctAnswer = bigger.toString();
+                const smaller = Math.min(a, b).toString();
+                options = [correctAnswer, smaller, (bigger + 2).toString(), (Math.max(1, smaller - 2)).toString()];
+
+            } else {
+                title = '🪜 징검다리 규칙 뛰어세기!';
+                const step = [2, 5, 10][Math.floor(Math.random() * 3)];
+                const start = step === 2 ? 2 : (step === 5 ? 5 : 10);
+                const seq = [start, start + step, start + step * 2, start + step * 3, start + step * 4];
+                const blankIndex = 3; // hide 4th element
+                const answerNum = seq[blankIndex];
+                seq[blankIndex] = '❓';
+                
+                question = `${seq.join(' , ')} <br>빈칸 [ ❓ ] 에 들어갈 알맞은 수는?`;
+                hint = `${step}씩 폴짝폴짝 커지고 있어!`;
+                visual = '🦘 쩜프! 쩜프!';
+                correctAnswer = answerNum.toString();
+                options = [
+                    correctAnswer, 
+                    (answerNum + step).toString(), 
+                    (answerNum - 1).toString(), 
+                    (answerNum + 2).toString()
+                ];
+            }
+
+            // Shuffle options
+            options = [...new Set(options)].sort(() => 0.5 - Math.random());
+            while(options.length < 4) options.push((parseInt(correctAnswer) + options.length + 3).toString());
+
+            return {
+                title, question, hint, visual, correctAnswer, options
+            };
+        }
+
+        const quizTitleEl = document.getElementById('quiz-category-title');
+        const quizQuestionEl = document.getElementById('quiz-question-text');
+        const quizVisualEl = document.getElementById('quiz-visual-icon');
+        const quizHintEl = document.getElementById('quiz-hint-text');
+        const quizOptionsContainer = document.getElementById('quiz-options-container');
+        const quizFeedbackEl = document.getElementById('quiz-feedback');
+        const feedbackTitleEl = document.getElementById('feedback-title');
+        const feedbackDescEl = document.getElementById('feedback-desc');
+        const nextMathBtn = document.getElementById('next-math-btn');
+        const streakEl = document.getElementById('quiz-streak');
+
+        function loadNewMathQuestion() {
+            currentQuiz = generateGrade1Math();
+            quizTitleEl.textContent = currentQuiz.title;
+            quizQuestionEl.innerHTML = currentQuiz.question;
+            quizVisualEl.textContent = currentQuiz.visual;
+            quizHintEl.textContent = currentQuiz.hint;
+            quizFeedbackEl.classList.add('hidden');
+            quizOptionsContainer.innerHTML = '';
+
+            currentQuiz.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'mario-btn bg-yellow-300 hover:bg-yellow-400 active:scale-95 text-gray-900 font-black text-2xl py-5 rounded-2xl border-4 border-black';
+                btn.textContent = opt;
+                btn.onclick = () => checkMathAnswer(opt, btn);
+                quizOptionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkMathAnswer(selected, buttonEl) {
+            const allBtns = quizOptionsContainer.querySelectorAll('button');
+            allBtns.forEach(b => b.disabled = true);
+
+            if (selected === currentQuiz.correctAnswer) {
+                // Correct!
+                currentStreak++;
+                streakEl.textContent = currentStreak;
+                buttonEl.classList.remove('bg-yellow-300');
+                buttonEl.classList.add('bg-green-500', 'text-white');
+                
+                // Base +2 min, bonus +1 min if 3-streak
+                let earnedMins = 2;
+                let bonusText = '';
+                if (currentStreak % 3 === 0) {
+                    earnedMins += 1;
+                    bonusText = ' 🌟 3연속 콤보 보너스 +1분 추가!';
+                }
+                const earnedCoins = 10;
+                addGameReward(earnedMins, earnedCoins);
+                playPowerupSound();
+
+                feedbackTitleEl.textContent = '🎉 정답입니다! 마리오 슈퍼 파워업!';
+                feedbackTitleEl.className = 'text-2xl font-black text-green-700 mb-1';
+                feedbackDescEl.textContent = `축하해요! 닌텐도 게임 시간 +${earnedMins}분과 코인 10개가 적립되었습니다!${bonusText}`;
+                quizFeedbackEl.className = 'mt-6 p-4 rounded-2xl border-4 border-green-500 bg-green-50 text-center block';
+
+            } else {
+                // Incorrect
+                currentStreak = 0;
+                streakEl.textContent = '0';
+                buttonEl.classList.remove('bg-yellow-300');
+                buttonEl.classList.add('bg-red-500', 'text-white');
+                playWrongSound();
+
+                // Highlight correct one
+                allBtns.forEach(b => {
+                    if (b.textContent === currentQuiz.correctAnswer) {
+                        b.classList.add('ring-4', 'ring-green-400', 'bg-green-100');
+                    }
+                });
+
+                feedbackTitleEl.textContent = '😢 아쉽네요! 다시 힘내보자!';
+                feedbackTitleEl.className = 'text-2xl font-black text-red-600 mb-1';
+                feedbackDescEl.textContent = `정답은 바로 [ ${currentQuiz.correctAnswer} ] 였어요. 다음 문제에서 꼭 맞춰봐요!`;
+                quizFeedbackEl.className = 'mt-6 p-4 rounded-2xl border-4 border-red-400 bg-red-50 text-center block';
+            }
+        }
+
+        nextMathBtn.addEventListener('click', () => {
+            playCoinSound();
+            loadNewMathQuestion();
+        });
+
+        // Riddle Game State
+        let currentRiddleChar = null;
+        const riddleQuestionCard = document.getElementById('riddle-question-card');
+        const riddleAnswerCard = document.getElementById('riddle-answer-card');
+        const riddleRevealBtn = document.getElementById('riddle-reveal-btn');
+        const nextRiddleBtn = document.getElementById('next-riddle-btn');
+
+        function loadNewRiddle() {
+            currentRiddleChar = marioCharacters[Math.floor(Math.random() * marioCharacters.length)];
+            
+            document.getElementById('riddle-hint-look').textContent = currentRiddleChar.riddleHint;
+            document.getElementById('riddle-hint-skill').textContent = currentRiddleChar.skill;
+            document.getElementById('riddle-hint-phrase').textContent = `"${currentRiddleChar.phrase}"`;
+
+            riddleQuestionCard.classList.remove('hidden');
+            riddleAnswerCard.classList.add('hidden');
+        }
+
+        riddleRevealBtn.addEventListener('click', () => {
+            playPowerupSound();
+            document.getElementById('riddle-answer-img').innerHTML = getCharRender(currentRiddleChar);
+            document.getElementById('riddle-answer-name').textContent = currentRiddleChar.name;
+            document.getElementById('riddle-answer-desc').textContent = currentRiddleChar.desc;
+
+            // Give bonus for riddle
+            addGameReward(1, 10);
+
+            riddleQuestionCard.classList.add('hidden');
+            riddleAnswerCard.classList.remove('hidden');
+        });
+
+        nextRiddleBtn.addEventListener('click', () => {
+            playCoinSound();
+            loadNewRiddle();
+        });
+
+        // Timer Mode (Allows father and son to actually count down and spend the earned minutes)
+        const openTimerBtn = document.getElementById('open-timer-btn');
+        const timerModalBackdrop = document.getElementById('timer-modal-backdrop');
+        const closeTimerModalBtn = document.getElementById('close-timer-modal');
+        const activeTimerSection = document.getElementById('active-timer-section');
+        const idleTimerSection = document.getElementById('idle-timer-section');
+        const countdownDisplay = document.getElementById('timer-countdown-display');
+        const stopTimerBtn = document.getElementById('stop-timer-btn');
+        const spendBtns = document.querySelectorAll('.spend-time-btn');
+        const spendAllBtn = document.getElementById('spend-all-btn');
+
+        let timerInterval = null;
+        let remainingSeconds = 0;
+
+        openTimerBtn.addEventListener('click', () => {
+            playJumpSound();
+            updateHUD();
+            timerModalBackdrop.classList.remove('hidden');
+        });
+
+        closeTimerModalBtn.addEventListener('click', () => {
+            timerModalBackdrop.classList.add('hidden');
+        });
+
+        timerModalBackdrop.addEventListener('click', (e) => {
+            if (e.target === timerModalBackdrop) timerModalBackdrop.classList.add('hidden');
+        });
+
+        function startCountdown(minutesToSpend) {
+            if ((userBank.nintendoMinutes || 0) < minutesToSpend) {
+                playWrongSound();
+                alertCustom(`적립된 시간이 부족해요! 현재 ${userBank.nintendoMinutes || 0}분 있어요. 수학 문제를 더 풀어보자!`);
+                return;
+            }
+
+            // Deduct from bank
+            userBank.nintendoMinutes -= minutesToSpend;
+            saveBankData();
+            playPowerupSound();
+
+            remainingSeconds = minutesToSpend * 60;
+            idleTimerSection.classList.add('hidden');
+            activeTimerSection.classList.remove('hidden');
+            updateTimerDisplay();
+
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                remainingSeconds--;
+                updateTimerDisplay();
+
+                if (remainingSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    playWrongSound();
+                    setTimeout(playWrongSound, 300);
+                    setTimeout(playWrongSound, 600);
+                    alertCustom('⏰ 삐빅! 약속한 닌텐도 게임 시간이 끝났습니다! 아빠랑 약속 지키기!');
+                    idleTimerSection.classList.remove('hidden');
+                    activeTimerSection.classList.add('hidden');
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(remainingSeconds / 60);
+            const s = remainingSeconds % 60;
+            countdownDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        stopTimerBtn.addEventListener('click', () => {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            // Return unused minutes
+            const unusedMins = Math.floor(remainingSeconds / 60);
+            if (unusedMins > 0) {
+                userBank.nintendoMinutes += unusedMins;
+                saveBankData();
+            }
+            playCoinSound();
+            idleTimerSection.classList.remove('hidden');
+            activeTimerSection.classList.add('hidden');
+        });
+
+        spendBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mins = parseInt(btn.dataset.mins, 10);
+                startCountdown(mins);
+            });
+        });
+
+        spendAllBtn.addEventListener('click', () => {
+            const allMins = userBank.nintendoMinutes || 0;
+            if (allMins <= 0) {
+                alertCustom('적립된 시간이 0분이에요! 먼저 수학 퀘스트를 풀어보세요!');
+                return;
+            }
+            startCountdown(allMins);
+        });
+
+        // Parent manual adjustment helpers
+        document.getElementById('add-five-manual').addEventListener('click', () => {
+            addGameReward(5, 50);
+            playCoinSound();
+        });
+
+        document.getElementById('reset-bank-manual').addEventListener('click', () => {
+            userBank.nintendoMinutes = 0;
+            userBank.coins = 0;
+            saveBankData();
+            playWrongSound();
+        });
+
+        function alertCustom(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white font-black px-6 py-4 rounded-2xl mario-box border-4 border-black text-center shadow-2xl text-lg animate-bounce max-w-sm w-full mx-4';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        function triggerConfetti() {
+            const colors = ['#E52521', '#FCD116', '#00A651', '#0066B2', '#FFFFFF'];
+            for (let i = 0; i < 35; i++) {
+                const conf = document.createElement('div');
+                conf.className = 'confetti-piece';
+                conf.style.left = `${Math.random() * 100}vw`;
+                conf.style.top = '10px';
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                conf.style.animationDuration = `${1.2 + Math.random() * 1.2}s`;
+                document.body.appendChild(conf);
+                setTimeout(() => conf.remove(), 2500);
+            }
+        }
+
+        // Tab switching
+        const tabEncyclopedia = document.getElementById('tab-encyclopedia');
+        const tabMath = document.getElementById('tab-math');
+        const tabRiddle = document.getElementById('tab-riddle');
+
+        const viewEncyclopedia = document.getElementById('view-encyclopedia');
+        const viewMath = document.getElementById('view-math');
+        const viewRiddle = document.getElementById('view-riddle');
+
+        function switchTab(targetView, activeTab) {
+            playCoinSound();
+            viewEncyclopedia.classList.add('hidden');
+            viewMath.classList.add('hidden');
+            viewRiddle.classList.add('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-red-500', 'text-white', 'active');
+                btn.classList.add('bg-white', 'text-gray-800');
+            });
+
+            activeTab.classList.remove('bg-white', 'text-gray-800');
+            activeTab.classList.add('bg-red-500', 'text-white', 'active');
+            targetView.classList.remove('hidden');
+        }
+
+        tabEncyclopedia.addEventListener('click', () => switchTab(viewEncyclopedia, tabEncyclopedia));
+        tabMath.addEventListener('click', () => {
+            switchTab(viewMath, tabMath);
+            loadNewMathQuestion();
+        });
+        tabRiddle.addEventListener('click', () => {
+            switchTab(viewRiddle, tabRiddle);
+            loadNewRiddle();
+        });
+
+        // Filter buttons
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-yellow-400', 'text-black', 'active');
+                    b.classList.add('bg-white', 'text-gray-700');
+                });
+                btn.classList.add('bg-yellow-400', 'text-black', 'active');
+                renderEncyclopedia(btn.dataset.filter);
+                playCoinSound();
+            });
+        });
+
+        // Window load bootstrap
+        window.addEventListener('load', () => {
+            loadSavedData();
+            renderEncyclopedia('all');
+            loadNewMathQuestion();
+            loadNewRiddle();
+        });
+    </script>
+</body>
+</html>
